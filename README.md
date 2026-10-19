@@ -23,3 +23,10 @@ El modo de ejecución simulada solo podrá usar cotizaciones verdaderamente en t
 - Mostrar timestamp, fuente, divisa, bid/ask, retraso y calidad de datos. Bloquear ejecución simulada automática si el precio es retrasado, obsoleto o el mercado está cerrado.
 - Compras y ventas virtuales, modo manual asistido y automático, comisión, spread, conversión FX real, riesgo y explicación educativa.
 - La APK actual aún NO cumple estas funciones; requiere implementación y proveedor de datos validado.
+
+## Modos intercambiables y formación gráfica (requisitos pendientes)
+- Tres modos con cambio inmediato en cualquier momento: MANUAL (usuario ejecuta), ASISTIDO (propuestas explicadas con aprobación), AUTOMÁTICO (órdenes virtuales sujetas a controles de riesgo). Conservar saldo, posiciones e historial al cambiar; cancelar órdenes simuladas pendientes no ejecutadas y detener bucles automáticos al abandonar el modo automático.
+- Gráficos de línea y velas japonesas OHLC, volumen, herramientas de zoom y desplazamiento, marcos 1m/5m/15m/30m/1h/1d/1w solo si la fuente ofrece datos autorizados y suficientes.
+- Al tocar una vela: apertura, máximo, mínimo, cierre, cuerpo, mechas, periodo y explicación didáctica. Guías sobre tendencias, soporte/resistencia, volumen, medias móviles, RSI y MACD; indicadores no garantizan resultados.
+- Identificar fuente, sello temporal, zona horaria, divisa y si los datos son en tiempo real o retrasados. No fabricar velas intradía a partir de precios de cierre ni de snapshots incompletos.
+- Esta sección es especificación futura; no afirmar que esté implementada en la APK actual.
