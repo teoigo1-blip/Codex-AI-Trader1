@@ -13,3 +13,13 @@ No conecta con un bróker ni utiliza dinero real. La estrategia actual es demost
 Incluir acciones y ETF cotizados en España (BME), otros mercados europeos, Estados Unidos, Asia y otros mercados internacionales. Búsqueda por empresa, ticker, ISIN, MIC/bolsa y país. Distinguir empresas de instrumentos cotizados y resolver correctamente tickers duplicados. Mostrar zona horaria, horario, divisa y timestamp de cada cotización.
 
 El modo de ejecución simulada solo podrá usar cotizaciones verdaderamente en tiempo real si el proveedor tiene cobertura y derechos de datos para esa bolsa; de lo contrario mostrar estado retrasado/no disponible y bloquear ejecución intradía. Conversión FX real, comisiones, spreads y liquidez simulados; 100 EUR de capital virtual. No prometer cobertura global hasta integrar y validar proveedores.
+
+## Especificación educativa acordada (pendiente de implementación)
+- Saldo inicial virtual elegible en EUR, persistente, reinicio explícito con confirmación.
+- Solo acciones y ETF reales, España y otros mercados cuando exista fuente gratuita con permisos adecuados para uso de la app y datos verdaderamente en tiempo real.
+- No confundir datos gratuitos, retrasados o de una sola plataforma (por ejemplo IEX) con datos consolidados de todas las bolsas.
+- Catálogo filtrado por cobertura verificada y licencia; instrumentos no cubiertos se muestran como no disponibles, sin inventar precios.
+- Estado de cada bolsa ABIERTO / CERRADO / PREAPERTURA / FESTIVO, próxima apertura y cierre, zona horaria IANA, calendario de festivos, horario de verano y medias sesiones.
+- Mostrar timestamp, fuente, divisa, bid/ask, retraso y calidad de datos. Bloquear ejecución simulada automática si el precio es retrasado, obsoleto o el mercado está cerrado.
+- Compras y ventas virtuales, modo manual asistido y automático, comisión, spread, conversión FX real, riesgo y explicación educativa.
+- La APK actual aún NO cumple estas funciones; requiere implementación y proveedor de datos validado.
