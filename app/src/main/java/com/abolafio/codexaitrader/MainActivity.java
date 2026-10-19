@@ -8,6 +8,8 @@ import android.widget.*;
 import java.net.*;
 import java.io.*;
 import java.util.*;
+import java.text.SimpleDateFormat;
+import org.json.*;
 
 public class MainActivity extends Activity {
   final String[] symbols={"aapl.us","msft.us","spy.us","qqq.us","voo.us"};
@@ -15,13 +17,16 @@ public class MainActivity extends Activity {
   double[] prices=new double[5]; String[] dates=new String[5];
   double cash=100,shares[]=new double[5];
   int mode=0; boolean halt=false; long lastOrder=0;
+  boolean refreshing=false; String quoteMessage=""; String[] sources=new String[5];
   LinearLayout layout; TextView summary,market,status; SharedPreferences prefs;
   @Override public void onCreate(Bundle b){super.onCreate(b);prefs=getSharedPreferences("portfolio",0);load();draw();refresh();}
   TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setPadding(12,10,12,10);return t;}
   Button button(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
   void draw(){ScrollView sc=new ScrollView(this);layout=new LinearLayout(this);layout.setOrientation(1);layout.setPadding(20,22,20,24);sc.addView(layout);setContentView(sc);
+    sc.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
+    sc.requestApplyInsets();
     layout.addView(label("CODEX AI TRADER · PAPER",23));
-    layout.addView(label("Dinero 100% virtual · Precios diarios de mercado, no tiempo real",13));
+    layout.addView(label("Dinero 100% virtual · Cierres diarios de mercado, no tiempo real",13));
     summary=label("",20);layout.addView(summary);
     status=label("",14);layout.addView(status);
     layout.addView(button("Actualizar precios reales",()->refresh()));
@@ -39,11 +44,80 @@ public class MainActivity extends Activity {
     layout.addView(button("Reiniciar simulación",()->confirmReset()));
     layout.addView(button("Ver historial",()->new AlertDialog.Builder(this).setTitle("Operaciones virtuales").setMessage(prefs.getString("log","Sin operaciones")).setPositiveButton("Cerrar",null).show()));
     layout.addView(label("AVISO: órdenes simuladas bloqueadas hasta integrar cotizaciones en directo autorizadas y cambio EUR/USD.\nPrototipo: sin IA generativa ni ejecución en segundo plano. Estrategia demostrativa determinista. Fuente: Stooq, precios de cierre potencialmente retrasados, denominados en USD; conversión EUR/USD no incluida.",12));render();}
-  void render(){double invested=0;StringBuilder sb=new StringBuilder("\nACTIVOS (precio cierre USD)\n");for(int i=0;i<5;i++){if(prices[i]>0)invested+=shares[i]*prices[i];sb.append(names[i]).append(" · ").append(prices[i]>0?String.format(Locale.US,"%.2f USD",prices[i]):"sin datos").append(" · ").append(dates[i]==null?"":dates[i]).append("\nTenencia: ").append(String.format(Locale.US,"%.4f",shares[i])).append("\n\n");}
+  void render(){double invested=0;StringBuilder sb=new StringBuilder("\nACTIVOS (precio cierre USD)\n");for(int i=0;i<5;i++){if(prices[i]>0)invested+=shares[i]*prices[i];sb.append(names[i]).append(" · ").append(prices[i]>0?String.format(Locale.US,"%.2f USD",prices[i]):"sin datos").append(" · ").append(dates[i]==null?"":dates[i]).append(sources[i]==null?"":" · "+sources[i]).append("\nTenencia: ").append(String.format(Locale.US,"%.4f",shares[i])).append("\n\n");}
     summary.setText(String.format(Locale.US,"Efectivo: %.2f unidades\nPosiciones: %.2f USD\nTotal indicativo: %.2f*",cash,invested,cash+invested));
-    status.setText(new String[]{"MANUAL","ASISTIDO","AUTOMÁTICO"}[mode]+(halt?" · DETENIDO":" · HABILITADO")+"\n*Cotizaciones en USD. Capital elegido en EUR; sin FX integrado: operaciones bloqueadas.");market.setText(sb.toString());}
-  void refresh(){status.setText("Consultando precios diarios...");new Thread(()->{double[] p=new double[5];String[] d=new String[5];for(int i=0;i<5;i++){try{URL url=new URL("https://stooq.com/q/d/l/?s="+symbols[i]+"&i=d&d1=20261001");HttpURLConnection c=(HttpURLConnection)url.openConnection();c.setConnectTimeout(8000);c.setReadTimeout(8000);c.setRequestProperty("User-Agent","Mozilla/5.0");try(BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream()))){String line,latest=null;while((line=br.readLine())!=null){if(line.matches("\\d{4}-\\d{2}-\\d{2},.*"))latest=line;}if(latest!=null){String[] fields=latest.split(",");p[i]=Double.parseDouble(fields[4]);d[i]=fields[0];}}c.disconnect();}catch(Exception ignored){}}
-    runOnUiThread(()->{int n=0;for(int i=0;i<5;i++){if(p[i]>0){prices[i]=p[i];dates[i]=d[i];n++;}}render();if(n==0)status.setText("No se pudieron cargar cotizaciones. Comprueba la conexión o el proveedor.");});}).start();}
+    status.setText(new String[]{"MANUAL","ASISTIDO","AUTOMÁTICO"}[mode]+(halt?" · DETENIDO":" · HABILITADO")+"\n*Cotizaciones en USD. Capital elegido en EUR; sin FX integrado: operaciones bloqueadas.");market.setText(sb.toString());if(!quoteMessage.isEmpty())status.append("\n"+quoteMessage);}
+  String download(String address) throws Exception {
+    HttpURLConnection c=(HttpURLConnection)new URL(address).openConnection();
+    c.setConnectTimeout(8000);c.setReadTimeout(8000);
+    c.setRequestProperty("User-Agent","Mozilla/5.0");
+    try {
+      if(c.getResponseCode()!=200)throw new IOException("HTTP "+c.getResponseCode());
+      StringBuilder body=new StringBuilder();
+      try(BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(),"UTF-8"))){
+        String line;while((line=br.readLine())!=null){
+          body.append(line).append('\n');
+          if(body.length()>2000000)throw new IOException("Respuesta demasiado grande");
+        }
+      }
+      return body.toString();
+    } finally {c.disconnect();}
+  }
+  void yahooClose(int i,double[] p,String[] d,String[] source) throws Exception {
+    String symbol=symbols[i].replace(".us","").toUpperCase(Locale.US);
+    JSONObject result=new JSONObject(download("https://query1.finance.yahoo.com/v8/finance/chart/"+symbol+"?interval=1d&range=1mo"))
+      .getJSONObject("chart").getJSONArray("result").getJSONObject(0);
+    if(!"USD".equals(result.getJSONObject("meta").getString("currency")))throw new IOException("Moneda inesperada");
+    JSONArray times=result.getJSONArray("timestamp");
+    JSONArray closes=result.getJSONObject("indicators").getJSONArray("quote").getJSONObject(0).getJSONArray("close");
+    SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
+    format.setTimeZone(TimeZone.getTimeZone("America/New_York"));
+    String today=format.format(new Date());
+    for(int j=times.length()-1;j>=0;j--){
+      if(closes.isNull(j))continue;
+      double price=closes.getDouble(j);
+      String date=format.format(new Date(times.getLong(j)*1000L));
+      // Exclude today's candle because the trading session may still be open.
+      if(date.compareTo(today)<0&&Double.isFinite(price)&&price>0){
+        p[i]=price;d[i]=date;source[i]="Yahoo Finance";return;
+      }
+    }
+    throw new IOException("Sin cierres diarios completos");
+  }
+  void stooqClose(int i,double[] p,String[] d,String[] source) throws Exception {
+    Calendar start=Calendar.getInstance();start.add(Calendar.DAY_OF_YEAR,-30);
+    String since=new SimpleDateFormat("yyyyMMdd",Locale.US).format(start.getTime());
+    String csv=download("https://stooq.com/q/d/l/?s="+symbols[i]+"&i=d&d1="+since);
+    String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
+    for(String line:csv.split("\\r?\\n")){
+      if(!line.matches("\\d{4}-\\d{2}-\\d{2},.*"))continue;
+      String[] fields=line.split(",");
+      if(fields.length<5||fields[0].compareTo(today)>=0)continue;
+      double price=Double.parseDouble(fields[4]);
+      if(Double.isFinite(price)&&price>0){p[i]=price;d[i]=fields[0];source[i]="Stooq";}
+    }
+    if(p[i]<=0)throw new IOException("Proveedor sin datos CSV");
+  }
+  void refresh(){
+    if(refreshing){toast("La actualización sigue en curso");return;}
+    refreshing=true;quoteMessage="Consultando cierres diarios…";render();
+    new Thread(()->{
+      double[] p=new double[5];String[] d=new String[5],source=new String[5];
+      for(int i=0;i<5;i++){
+        try{yahooClose(i,p,d,source);}catch(Exception primary){
+          try{stooqClose(i,p,d,source);}catch(Exception fallback){android.util.Log.w("Quotes","No se pudo actualizar "+symbols[i],fallback);}
+        }
+      }
+      runOnUiThread(()->{
+        refreshing=false;if(isFinishing()||isDestroyed())return;
+        int n=0;for(int i=0;i<5;i++)if(p[i]>0){prices[i]=p[i];dates[i]=d[i];sources[i]=source[i];n++;}
+        quoteMessage=n==5?"5/5 cierres actualizados. Consulta la fecha y fuente de cada activo.":
+          n==0?"No se pudieron actualizar los precios. Los datos anteriores, si existen, se conservan. Comprueba la conexión y vuelve a intentarlo.":
+          n+"/5 cierres actualizados. Los demás conservan su fecha anterior o siguen sin datos.";
+        render();
+      });
+    }).start();
+  }
   void analyze(){if(halt){toast("Operaciones detenidas");return;}int best=-1;double lowest=Double.MAX_VALUE;for(int i=0;i<5;i++)if(prices[i]>0&&shares[i]==0&&prices[i]<lowest){best=i;lowest=prices[i];}
     if(best<0){toast("No hay señales disponibles. Actualiza precios.");return;}
     final int ix=best;final double amount=Math.min(10,cash-30);
