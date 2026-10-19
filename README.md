@@ -30,3 +30,18 @@ El modo de ejecución simulada solo podrá usar cotizaciones verdaderamente en t
 - Al tocar una vela: apertura, máximo, mínimo, cierre, cuerpo, mechas, periodo y explicación didáctica. Guías sobre tendencias, soporte/resistencia, volumen, medias móviles, RSI y MACD; indicadores no garantizan resultados.
 - Identificar fuente, sello temporal, zona horaria, divisa y si los datos son en tiempo real o retrasados. No fabricar velas intradía a partir de precios de cierre ni de snapshots incompletos.
 - Esta sección es especificación futura; no afirmar que esté implementada en la APK actual.
+
+## Plan aprobado: diez mejoras y reinicio
+1. Gestión de riesgos: stop-loss, take-profit, trailing stop, exposición máxima, pérdida máxima diaria.
+2. Cartera avanzada: saldo disponible, posiciones, P&L, rentabilidad, diversificación geográfica y sectorial.
+3. Alertas configurables de precio, tendencia, apertura y cierre de bolsas.
+4. Profesor educativo con IA y explicaciones verificables; no prometer predicción fiable.
+5. Backtesting con datos históricos autorizados, sin sesgo de anticipación y con costes simulados.
+6. Noticias económicas y calendario de resultados, dividendos y eventos, con fuente y fecha.
+7. Órdenes virtuales de mercado, límite, pendientes y ejecuciones parciales si hay datos de liquidez adecuados.
+8. Escuela de trading: lecciones, ejercicios y cuestionarios.
+9. Retos de inversión virtual con objetivos y métricas de riesgo.
+10. Guardado persistente, exportación e importación de copias de seguridad.
+11. Reiniciar simulación: botón con confirmación explícita; borrar cartera, órdenes, historial y progreso de simulación, mantener preferencias opcionalmente; permitir elegir nuevo saldo inicial en EUR. El botón básico de reset ya está en MainActivity, pero todavía usa 100 unidades y no tiene selector de capital.
+
+Prioridad de desarrollo: fuentes gratuitas autorizadas de precios realmente en tiempo real, calendario de bolsas, divisas, motor de operaciones virtuales, saldo inicial elegible, modos intercambiables y controles de riesgo. Las funciones 1-10 son requisitos pendientes, no características implementadas.
